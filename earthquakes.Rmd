@@ -14,4 +14,222 @@ knitr::opts_chunk$set(echo = TRUE)
 The following web page allows the public to download all earthquakes recorded by the US Geological Survey (USGS) in the past 30 days. 
 
 https://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php
+ 
+In this project you will import, prepare, visualize and summarize data on earthquakes by completing a series of tasks.
+
+The data has 22 variables which are documented on the following web page: https://earthquake.usgs.gov/data/comcat/index.php
+
+Each row in the dataset represents one earthquake.
+
+## 1. Read in the data
+
+Earthquakes data for the past 30 days was retrieved on 2021-12-17 and is available as a CSV file from the following URL:
+
+https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true
+
+Import the data as a data frame object. Hint: use the `read_csv()` function in the readr package.
+
+```{r}
+library(tidyverse)
+URL <- "https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true"
+d <- read_csv(URL)
+```
+
+## 2. Create a location column
+
+The place column reports distance and direction from a location (sometimes). Here's a sample:
+
+```{r}
+set.seed(22)
+d %>% 
+  sample_n(20) %>% 
+  select(place)
+```
+
+Sometimes we are only told things like "off the coast of..."
+
+Create a column that contains just location. For example, a row with place "40 km NE of Severomuysk, Russia" would have a location of "Severomuysk, Russia".
+
+```{r}
+d <- d %>% 
+  mutate(location = stringr::str_extract(place, "(?<=of ).+"))
+```
+
+Check if your new location column has any missing data. If it does, copy the place data into those fields.
+
+```{r}
+# check
+d %>% 
+  filter(is.na(location)) %>% 
+  select(place) %>% 
+  View()
+```
+
+
+```{r}
+# update location with place data
+d <- d %>% 
+  mutate(location = if_else(is.na(location), place, location))
+```
+
+## 3. Investigate location
+
+1. Which location had the most earthquakes? 
+2. How many unique, or distinct, locations were there in the past 30 days?
+3. How many earthquakes happened in California?
+4. How many locations had just one earthquake? 
+
+```{r}
+# top 6 by location
+d %>% 
+  count(location) %>% 
+  arrange(desc(n)) %>% 
+  head()
+```
+
+```{r}
+# distinct locations
+d %>% 
+  distinct(location) %>% 
+  nrow()
+```
+
+
+```{r}
+# number of earthquakes by CA
+d %>% 
+  filter(stringr::str_detect(location, "CA")) %>% 
+  nrow()
+```
+
+```{r}
+# how many locations had one earthquake
+d %>% 
+  count(location) %>%
+  filter(n == 1) %>% 
+  nrow()
+```
+
+
+## 4. Calculate elapsed time between earthquakes
+
+The data is ordered in descending order, with most recent earthquake first. Calculate the time that elapsed between earthquakes. For example, the first two rows have the following times:
+
+```
+time 
+2021-12-17 20:00:54
+2021-12-17 19:50:06
+```
+The elapsed time between the earthquakes was 648.372 seconds. (The raw data has time down to the thousandth of a second!) That's about 10.8 minutes.
+
+Add this elapsed time to the data as seconds. Name the column "elapsed_time". So the first row above would have a new column as follows:
+
+```
+time                 elapsed_time
+2021-12-17 20:00:54  648.372
+
+```
+The last column will have NA since it's the oldest record in our data and we don't have the time of the earthquake before it.
+
+Hint: this can be accomplished with simple subtraction. See the dplyr vignette "Window Functions" and scroll to the section **Lead and Lag**. One of the examples shows exactly what to do, except you want to use `lead` instead of `lag`.
+
+```{r}
+d <- d %>% 
+  mutate(elapsed_time = time - lead(time))
+```
+
+
+
+## 5. Investigate the type column
+
+How many categories are in type column and what are their counts?
+
+```{r}
+d %>% count(type)
+```
+
+## 6. Investigate elapsed time between earthquakes
+
+The previous task hopefully revealed that some "earthquakes" are actually not earthquakes at all. Taking this into account, investigate elapsed time between true earthquakes. How is it distributed? Is the mean a good measure of center? What might be a better measure of center?
+
+
+```{r}
+# very skew
+d %>% 
+  filter(type == "earthquake") %>% 
+  ggplot() +
+  aes(x = elapsed_time) +
+  geom_histogram(binwidth = 100)
+```
+
+```{r}
+# median
+d %>% 
+  filter(type == "earthquake") %>% 
+  summarize(m = median(elapsed_time, na.rm = TRUE))
+```
+
+```{r}
+d %>% 
+  filter(type == "earthquake") %>% 
+  select(elapsed_time) %>%
+  pull() %>% 
+  as.numeric() %>% 
+  summary()
+```
+
+```{r}
+# base R
+d$elapsed_time[d$type=="earthquake"] |>
+  as.numeric() |>
+  summary()
+```
+
+## 7. How does magnitude vary between earthquake types?
+
+Magnitude measures the size of an earthquake on the Richter scale. It is a logarithmic scale which is a fancy way of saying it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
+
+How does the distribution of magnitude vary between earthquake types. This could be answered with a visualization.
+
+```{r}
+ggplot(d) +
+  aes(x = mag) +
+  geom_histogram() +
+  facet_wrap(~type, scales = "free_y")
+  
+```
+
+
+```{r}
+tapply(d$mag, d$type, summary)
+```
+
+Note: magnitude can sometimes be negative: https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
+
+
+## 8. Which location has the highest mean magnitude?
+
+Only consider locations that had at least 3 earthquakes.
+
+```{r}
+d %>% 
+  group_by(location) %>% 
+  summarise(m = mean(mag),
+            n = n()) %>%
+  filter(n > 2) %>% 
+  arrange(m = desc(m))
+```
+
+
+
+## 9. Investigate the relationship between depth and magnitude
+
+Is depth of an earthquake associated with its magnitude? A visualization might help explore this.
+
+```{r}
+# Anything deeper than 300 kilometers appears to have a mag of at least 4.
+ggplot(d) +
+  aes(x = depth, y = mag) +
+  geom_point()
+```
 
