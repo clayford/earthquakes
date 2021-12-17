@@ -1,0 +1,17 @@
+---
+title: "Earthquake analysis"
+author: "Clay Ford"
+date: "12/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About the data
+
+The following web page allows the public to download all earthquakes recorded by the US Geological Survey (USGS) in the past 30 days. 
+
+https://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php
+
