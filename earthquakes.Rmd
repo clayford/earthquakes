@@ -19,7 +19,7 @@ In this project you will import, prepare, visualize and summarize data on earthq
 
 The data has 22 variables which are documented on the following web page: https://earthquake.usgs.gov/data/comcat/index.php
 
-Each row in the dataset represents one earthquake.
+Each row in the data represents one earthquake. The data is ordered by earthquake date in descending order, with the most recent earthquake first.
 
 ## 1. Read in the data
 
@@ -27,13 +27,33 @@ Earthquakes data for the past 30 days was retrieved on 2021-12-17 and is availab
 
 https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true
 
-Import the data as a data frame object. Hint: use the `read_csv()` function in the readr package.
+Import the data as a data frame object. Tip: use the `read_csv()` function in the readr package.
 
 ```{r}
 library(tidyverse)
 URL <- "https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true"
 d <- read_csv(URL)
 ```
+
+Take a quick glimpse of the data to get familiar with it and/or look at summaries of the columns.
+
+```{r}
+View(d)
+glimpse(d)
+```
+
+```{r}
+d %>% 
+  select(where(~ is.character(.x) && length(unique(.x)) < 20)) %>% 
+  map(table)
+```
+
+```{r}
+d %>% 
+  select(where(is.numeric)) %>% 
+  map(summary)
+```
+
 
 ## 2. Create a location column
 
@@ -46,36 +66,22 @@ d %>%
   select(place)
 ```
 
-Sometimes we are only told things like "off the coast of..."
+Sometimes we are only told things like "off the coast of..." or "South Sandwich Islands region".
 
-Create a column that contains just location. For example, a row with place "40 km NE of Severomuysk, Russia" would have a location of "Severomuysk, Russia".
+Create a column that contains just location. For example, a row with place "40 km NE of Severomuysk, Russia" would have a location of "Severomuysk, Russia". And a row with place "South Sandwich Islands region" would have a location of "South Sandwich Islands region".
 
 ```{r}
 d <- d %>% 
-  mutate(location = stringr::str_extract(place, "(?<=of ).+"))
-```
-
-Check if your new location column has any missing data. If it does, copy the place data into those fields.
-
-```{r}
-# check
-d %>% 
-  filter(is.na(location)) %>% 
-  select(place) %>% 
-  View()
-```
-
-
-```{r}
-# update location with place data
-d <- d %>% 
+  mutate(location = stringr::str_extract(place, "(?<=of ).+")) %>%
   mutate(location = if_else(is.na(location), place, location))
 ```
+
+
 
 ## 3. Investigate location
 
 1. Which location had the most earthquakes? 
-2. How many unique, or distinct, locations were there in the past 30 days?
+2. How many unique, or distinct, locations are in the data?
 3. How many earthquakes happened in California?
 4. How many locations had just one earthquake? 
 
@@ -139,14 +145,14 @@ d <- d %>%
 ```
 
 
-
 ## 5. Investigate the type column
 
-How many categories are in type column and what are their counts?
+The type column reports the type of seismic event. What are the counts of the various seismic events?
 
 ```{r}
 d %>% count(type)
 ```
+
 
 ## 6. Investigate elapsed time between earthquakes
 
@@ -178,13 +184,6 @@ d %>%
   summary()
 ```
 
-```{r}
-# base R
-d$elapsed_time[d$type=="earthquake"] |>
-  as.numeric() |>
-  summary()
-```
-
 ## 7. How does magnitude vary between earthquake types?
 
 Magnitude measures the size of an earthquake on the Richter scale. It is a logarithmic scale which is a fancy way of saying it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
@@ -201,8 +200,16 @@ ggplot(d) +
 
 
 ```{r}
+# base R seems easier here
 tapply(d$mag, d$type, summary)
 ```
+
+```{r}
+d %>% 
+  split(.$type) %>% 
+  map(~ summary(.$mag))
+```
+
 
 Note: magnitude can sometimes be negative: https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
 
@@ -231,5 +238,98 @@ Is depth of an earthquake associated with its magnitude? A visualization might h
 ggplot(d) +
   aes(x = depth, y = mag) +
   geom_point()
+```
+
+# 10. Investigate the depth error
+
+The depthError column reports the uncertainty of the reported depth of an event in kilometers. How is depthError associated with depth? Does depthError increase as depth increases? Are there influential observations that suppress or amplify this relationship?
+
+```{r}
+summary(d$depthError)
+quantile(d$depthError, probs = seq(0.90,0.99,.01))
+```
+
+
+```{r}
+# no, not really it seems with outlying values included
+ggplot(d) +
+  aes(x = depth, y = depthError) +
+  geom_point() +
+  geom_smooth()
+```
+
+
+```{r}
+# Seems to be a positive association for those events with smaller depthError
+# values, especially for depths up to 400 km.
+ggplot(d) +
+  aes(x = depth, y = depthError) +
+  geom_point() +
+  geom_smooth() +
+  ylim(c(0,30))
+```
+
+
+## 11. Does magError differ between magType?
+
+The magType column reports the method or algorithm used to calculate the preferred magnitude for the event. 
+
+The magError column reports the uncertainty of the reported magnitude of an event. (ie, the estimated standard error of the magnitude.)
+
+Does magError differ between magType? Are there certain methods that have higher error? A visualization may help investigate this. 
+
+```{r}
+# ml and md methods seem to have higher errors
+ggplot(d) +
+  aes(x = magType, y = magError) +
+  geom_boxplot()
+```
+
+
+```{r}
+ggplot(d) +
+  aes(x = magType, y = magError) +
+  geom_jitter(width = 0.2, height = 0, alpha = 1/3)
+```
+
+
+```{r}
+tapply(d$magError, d$magType, summary)
+```
+
+## 12. Do seismic events in some places tend to have larger magError?
+
+Based on the previous task you hopefully have some sense what constitutes "large" magError in this data. Do these large magErrors seem to be related to certain locations?
+
+```{r}
+# yes, Hawaii
+d %>% 
+  filter(magError > 3) %>% 
+  select(place) %>% 
+  View()
+```
+
+
+## plot earthquakes
+
+```{r}
+d$depthC <- as.character(d$depth)
+```
+
+
+```{r}
+library(leaflet)
+d %>% 
+  filter(depth < 30) %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addCircleMarkers(lng = ~longitude, lat = ~latitude, radius = ~depth, popup = ~depthC)
+```
+
+```{r}
+d %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addCircleMarkers(lng = ~longitude, lat = ~latitude, radius = ~mag)
 ```
 
