@@ -1,7 +1,7 @@
 ---
-title: "Earthquake analysis"
+title: "PhD Plus Final Project: Earthquake analysis"
 author: "Clay Ford"
-date: "12/17/2021"
+date: "Spring 2022"
 output: html_document
 ---
 
@@ -27,7 +27,7 @@ Earthquakes data for the past 30 days was retrieved on 2021-12-17 and is availab
 
 https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true
 
-Import the data as a data frame object. Tip: use the `read_csv()` function in the readr package.
+Import the data as a data frame object. Tip: use the `read_csv()` function in the readr package. The base R `read.csv` works just fine, but the `read_csv` function automatically formats the dates for us.
 
 ```{r}
 library(tidyverse)
@@ -43,6 +43,7 @@ glimpse(d)
 ```
 
 ```{r}
+# all chr vars but place
 d %>% 
   select(where(~ is.character(.x) && length(unique(.x)) < 20)) %>% 
   map(table)
@@ -80,17 +81,22 @@ d <- d %>%
 
 ## 3. Investigate location
 
-1. Which location had the most earthquakes? 
+1. Which five locations had the most earthquakes? 
 2. How many unique, or distinct, locations are in the data?
 3. How many earthquakes happened in California?
 4. How many locations had just one earthquake? 
 
 ```{r}
-# top 6 by location
+# top 5 by location
+d %>% 
+  count(location) %>% 
+  slice_max(n, n = 5)
+
+# or
 d %>% 
   count(location) %>% 
   arrange(desc(n)) %>% 
-  head()
+  head(n = 5)
 ```
 
 ```{r}
@@ -109,7 +115,7 @@ d %>%
 ```
 
 ```{r}
-# how many locations had one earthquake
+# how many locations reported one earthquake
 d %>% 
   count(location) %>%
   filter(n == 1) %>% 
@@ -156,7 +162,11 @@ d %>% count(type)
 
 ## 6. Investigate elapsed time between earthquakes
 
-The previous task hopefully revealed that some "earthquakes" are actually not earthquakes at all. Taking this into account, investigate elapsed time between true earthquakes. How is it distributed? Is the mean a good measure of center? What might be a better measure of center?
+The previous task hopefully revealed that some "earthquakes" are actually not earthquakes at all. Taking this into account, investigate elapsed time between true earthquakes. 
+
+- How is it distributed?
+- Is the mean a good measure of center? What might be a better measure of center? 
+- About how often did an earthquake occur in the past 30 days?
 
 
 ```{r}
@@ -176,21 +186,27 @@ d %>%
 ```
 
 ```{r}
+# about every 3 minutes or so
 d %>% 
   filter(type == "earthquake") %>% 
   select(elapsed_time) %>%
   pull() %>% 
   as.numeric() %>% 
-  summary()
+  summary()/60  # convert to mins
 ```
 
 ## 7. How does magnitude vary between earthquake types?
 
 Magnitude measures the size of an earthquake on the Richter scale. It is a logarithmic scale which is a fancy way of saying it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
 
-How does the distribution of magnitude vary between earthquake types. This could be answered with a visualization.
+How does the distribution of magnitude vary between earthquake types? This could be answered with a visualization.
+
+Note: magnitude can sometimes be negative: https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
 
 ```{r}
+# seismic events that were not "earthquake" tend to be about magnitude 2 or
+# lower.
+# Earthquakes were bimodal, with concentrations around 0-2 and 4-5
 ggplot(d) +
   aes(x = mag) +
   geom_histogram() +
@@ -211,12 +227,9 @@ d %>%
 ```
 
 
-Note: magnitude can sometimes be negative: https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
-
-
 ## 8. Which location has the highest mean magnitude?
 
-Only consider locations that had at least 3 earthquakes.
+Consider locations that had at least 3 earthquakes, which location had the highest mean magnitude.
 
 ```{r}
 d %>% 
@@ -224,7 +237,7 @@ d %>%
   summarise(m = mean(mag),
             n = n()) %>%
   filter(n > 2) %>% 
-  arrange(m = desc(m))
+  slice_max(m, n = 5)
 ```
 
 
@@ -251,7 +264,7 @@ quantile(d$depthError, probs = seq(0.90,0.99,.01))
 
 
 ```{r}
-# no, not really it seems with outlying values included
+# outlying values may obscure relationship
 ggplot(d) +
   aes(x = depth, y = depthError) +
   geom_point() +
@@ -260,6 +273,7 @@ ggplot(d) +
 
 
 ```{r}
+# filter for depthError < 30;
 # Seems to be a positive association for those events with smaller depthError
 # values, especially for depths up to 400 km.
 ggplot(d) +
@@ -289,7 +303,7 @@ ggplot(d) +
 ```{r}
 ggplot(d) +
   aes(x = magType, y = magError) +
-  geom_jitter(width = 0.2, height = 0, alpha = 1/3)
+  geom_jitter(width = 0.3, height = 0, alpha = 1/3)
 ```
 
 
@@ -299,7 +313,7 @@ tapply(d$magError, d$magType, summary)
 
 ## 12. Do seismic events in some places tend to have larger magError?
 
-Based on the previous task you hopefully have some sense what constitutes "large" magError in this data. Do these large magErrors seem to be related to certain locations?
+Based on the previous task you hopefully have some sense what constitutes "large" magError in this data. Do these large magErrors (say, greater than 3) seem to be related to certain locations?
 
 ```{r}
 # yes, Hawaii
@@ -310,26 +324,83 @@ d %>%
 ```
 
 
-## plot earthquakes
+## 13. plot earthquakes
 
-```{r}
-d$depthC <- as.character(d$depth)
-```
+Our data has latitude and longitude coordinates of the observed seismic event. Longitude is the world's x-axis. Latitude is the world's y-axis. Using these coordinates we can plot the location of the event on a map.
 
+Below is an example of how we can do that using the leaflet package. If you have never used leaflet you'll need to install it. Run the code below. An interactive map should be created in the RStudio Viewer that you can double-click or scroll to zoom in on locations. You can also click-and-drag to move around. Try it.
 
 ```{r}
 library(leaflet)
 d %>% 
-  filter(depth < 30) %>% 
   leaflet() %>% 
   addTiles() %>% 
-  addCircleMarkers(lng = ~longitude, lat = ~latitude, radius = ~depth, popup = ~depthC)
+  addCircleMarkers(lng = ~longitude, lat = ~latitude)
 ```
 
+
+It would be nice if we could click on a point and get information about the earthquake. Fortunately we can use the `popup` argument in the `addCircleMarkers` function. It requires a character string. This means we need to add a character string to our data that contains the information we want to display. For example, if we wanted to create a label that displayed magError and depthError, we might do something like this:
+
+```
+d <- d %>% 
+  mutate(info = paste0("magError = ", magError, "; depthError = ", depthError))
+
+```
+
+That would create a column called "info" that we could use with the popup argument, like so: `popup = ~info`
+
+Update the previous code chunk to display a popup that reports magnitude and depth using the sample code above as a guide.
+
 ```{r}
+d <- d %>% 
+  mutate(info = paste0("mag = ", mag, "; depth = ", depth))
 d %>% 
   leaflet() %>% 
   addTiles() %>% 
-  addCircleMarkers(lng = ~longitude, lat = ~latitude, radius = ~mag)
+  addCircleMarkers(lng = ~longitude, lat = ~latitude, 
+                   popup = ~info)
 ```
+
+Finally it might be nice if the color of the markers reflected the intensity of the magnitude. That way we could see at a glance where the bigger earthquakes happened. This requires a bit more work in leaflet. Here's an example using toy data.
+
+```{r}
+# create fake data centered over VA
+set.seed(1)
+n <- 50
+x <- rnorm(n, mean = -78)
+y <- rnorm(n, mean = 37)
+z <- sqrt(x ^ 2 + y ^ 2)
+df <- data.frame(x, y, z)
+
+# create a palette function; OrRd is a palette from the RColorBrewer package
+pal <- colorNumeric("OrRd", df$z)
+
+# use the pal() function in the color argument for addCircleMarkers
+leaflet(df) %>%
+  addTiles() %>%
+  addCircleMarkers(~x, ~y, color = ~pal(z)) %>%
+  addLegend(pal = pal, values = ~z, position = "bottomleft")
+```
+
+
+Use the example above as a template to update the map of earthquakes to include circles that are colored according to magnitude along with a legend. 
+
+
+```{r}
+pal <- colorNumeric("OrRd", d$mag)
+d %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addCircleMarkers(lng = ~longitude, lat = ~latitude, 
+                   color = ~pal(mag),
+                   popup = ~info) %>% 
+  addLegend(pal = pal, values = ~mag, 
+            position = "bottomleft")
+
+```
+
+
+What's nice about leaflet maps is that they can be embedded in R Markdown HTML reports or presentations. Simply knit your Rmd file and your HTML report will contain a fully interactive map.
+
+
 
