@@ -71,7 +71,17 @@ Sometimes we are only told things like "off the coast of..." or "South Sandwich 
 
 Create a column that contains just location. For example, a row with place "40 km NE of Severomuysk, Russia" would have a location of "Severomuysk, Russia". And a row with place "South Sandwich Islands region" would have a location of "South Sandwich Islands region".
 
+
 ```{r}
+# an easy way, perhaps reckless
+d <- d %>% 
+  mutate(location = stringr::str_replace(place, ".+ of ", "")) 
+
+```
+
+
+```{r}
+# more complicated way, perhaps safer
 d <- d %>% 
   mutate(location = stringr::str_extract(place, "(?<=of ).+")) %>%
   mutate(location = if_else(is.na(location), place, location))
@@ -92,27 +102,43 @@ d %>%
   count(location) %>% 
   slice_max(n, n = 5)
 
-# or
 d %>% 
   count(location) %>% 
   arrange(desc(n)) %>% 
   head(n = 5)
+
+#   location               n
+#   <chr>              <int>
+# 1 Pahala, Hawaii       694
+# 2 The Geysers, CA      691
+# 3 Cobb, CA             360
+# 4 Mina, Nevada         285
+# 5 Searles Valley, CA   148
+
 ```
+
 
 ```{r}
 # distinct locations
 d %>% 
   distinct(location) %>% 
   nrow()
+
+# 1309
 ```
+
 
 
 ```{r}
-# number of earthquakes by CA
+# number of earthquakes in CA
+
 d %>% 
   filter(stringr::str_detect(location, "CA")) %>% 
   nrow()
+# 3141
 ```
+
+
 
 ```{r}
 # how many locations reported one earthquake
@@ -120,6 +146,7 @@ d %>%
   count(location) %>%
   filter(n == 1) %>% 
   nrow()
+# 657
 ```
 
 
@@ -157,12 +184,21 @@ The type column reports the type of seismic event. What are the counts of the va
 
 ```{r}
 d %>% count(type)
+
+#   type             n
+#   <chr>        <int>
+# 1 earthquake    8882
+# 2 explosion       58
+# 3 ice quake       20
+# 4 other event      3
+# 5 quarry blast   115
+# 6 sonic boom       1
 ```
 
 
 ## 6. Investigate elapsed time between earthquakes
 
-The previous task hopefully revealed that some "earthquakes" are actually not earthquakes at all. Taking this into account, investigate elapsed time between true earthquakes. 
+The previous task hopefully revealed that some "earthquakes" are actually not earthquakes at all. Taking this into account, investigate elapsed time between type = "earthquakes". 
 
 - How is it distributed?
 - Is the mean a good measure of center? What might be a better measure of center? 
@@ -183,6 +219,7 @@ d %>%
 d %>% 
   filter(type == "earthquake") %>% 
   summarize(m = median(elapsed_time, na.rm = TRUE))
+# 194.6 secs
 ```
 
 ```{r}
@@ -229,9 +266,10 @@ d %>%
 
 ## 8. Which location has the highest mean magnitude?
 
-Consider locations that had at least 3 earthquakes, which location had the highest mean magnitude.
+Considering locations that had at least 3 earthquakes, which location had the highest mean magnitude.
 
 ```{r}
+# Macquarie Island 
 d %>% 
   group_by(location) %>% 
   summarise(m = mean(mag),
@@ -247,7 +285,7 @@ d %>%
 Is depth of an earthquake associated with its magnitude? A visualization might help explore this.
 
 ```{r}
-# Anything deeper than 300 kilometers appears to have a mag of at least 4.
+# Anything deeper than about 300 kilometers appears to have a mag of at least 4.
 ggplot(d) +
   aes(x = depth, y = mag) +
   geom_point()
@@ -255,7 +293,9 @@ ggplot(d) +
 
 # 10. Investigate the depth error
 
-The depthError column reports the uncertainty of the reported depth of an event in kilometers. How is depthError associated with depth? Does depthError increase as depth increases? Are there influential observations that suppress or amplify this relationship?
+The depthError column reports the uncertainty of the reported depth of an event in kilometers. 
+
+- Is depthError associated with depth? Are there influential depthError observations that suppress or amplify this relationship?
 
 ```{r}
 summary(d$depthError)
@@ -339,7 +379,7 @@ d %>%
 ```
 
 
-It would be nice if we could click on a point and get information about the earthquake. Fortunately we can use the `popup` argument in the `addCircleMarkers` function. It requires a character string. This means we need to add a character string to our data that contains the information we want to display. For example, if we wanted to create a label that displayed magError and depthError, we might do something like this:
+It would be nice if we could click on a point and get information about the earthquake. Fortunately we can use the `popup` argument in the `addCircleMarkers` function. It requires a character string. **This means we need to add a character string to our data that contains the information we want to display.** For example, if we wanted to create a label that displayed magError and depthError, we might do something like this:
 
 ```
 d <- d %>% 
@@ -372,10 +412,11 @@ y <- rnorm(n, mean = 37)
 z <- sqrt(x ^ 2 + y ^ 2)
 df <- data.frame(x, y, z)
 
-# create a palette function; OrRd is a palette from the RColorBrewer package
+# create a palette function; OrRd is a palette from the RColorBrewer package; this creates a palete colored according to the z column in our toy data
 pal <- colorNumeric("OrRd", df$z)
 
-# use the pal() function in the color argument for addCircleMarkers
+# use the pal() function in the color argument for addCircleMarkers: 
+# color = ~pal(z)
 leaflet(df) %>%
   addTiles() %>%
   addCircleMarkers(~x, ~y, color = ~pal(z)) %>%
