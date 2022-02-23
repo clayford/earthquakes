@@ -9,15 +9,19 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Instructions
+
+Complete all tasks with working R code. Add explanations and comments when requested or as needed. When done, save your work and email your completed Rmd file to Clay Ford: `clayford@virginia.edu`.
+
+We will all work together on this, pausing to work on each task, and then coming together to discuss how to accomplish the task. Think of this session as completing 10 YOUR TURNS.
+
 ## About the data
 
 The following web page allows the public to download all earthquakes recorded by the US Geological Survey (USGS) in the past 30 days. 
 
-https://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php
- 
-_In this project you will import, visualize and summarize data on earthquakes by completing a series of tasks._
+<https://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php>
 
-The data has 22 variables which are documented on the following web page: https://earthquake.usgs.gov/data/comcat/index.php
+The data has 22 variables which are documented on the following web page: <https://earthquake.usgs.gov/data/comcat/index.php>
 
 Each row in the data represents one earthquake. The data is ordered by earthquake date in descending order, with the most recent earthquake first.
 
@@ -28,7 +32,7 @@ Earthquakes data for the past 30 days was retrieved on 2021-12-17 and is availab
 
 https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true
 
-Using the URL above, import the data as a data frame object. Tip: use the `read_csv()` function in the readr package. The base R `read.csv` works just fine, but the `read_csv` function automatically formats the dates for us. Also recall that `read_csv()` works with URLs.
+Using the URL above, import the data as a data frame object and name it "d". Tip: use the `read_csv()` function in the readr package. The base R `read.csv` works just fine, but the `read_csv` function automatically formats the dates for us. Also recall that `read_csv()` works with URLs.
 
 ```{r}
 library(tidyverse)
@@ -62,12 +66,26 @@ d %>%
   map(summary)
 ```
 
+## 3. Visualize the distribution of magnitude
 
-## 3. Visualize the relationship between depth and magnitude
+The "mag" variable measures the magnitude of an earthquake on the Richter scale. It is a logarithmic scale which is a fancy way of saying it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
 
-The "depth" variable measures the depth of an earthquake in kilometers. The "mag" variable measures the magnitude of an earthquake on the Richter scale. It is a logarithmic scale which is a fancy way of saying it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
+Visualize the distribution of "mag". Comment on this distribution.
 
-How is the depth of an earthquake associated with its magnitude? Create a visualization to investigate. Comment on this relationship (one sentence will do.)
+```{r}
+# Distribution is bimodal, with peaks at about 1 and 4.
+ggplot(d) +
+  aes(x = mag) +
+  geom_density()
+```
+
+
+
+## 4. Visualize the relationship between depth and magnitude
+
+The "depth" variable measures the depth of an earthquake in kilometers. 
+
+How is the depth of an earthquake associated with its magnitude ("mag")? Create a visualization to investigate. Comment on this relationship (one sentence will do.)
 
 ```{r}
 # Anything deeper than about 300 kilometers appears to have a mag of at least 4.
@@ -77,7 +95,7 @@ ggplot(d) +
 ```
 
 
-## 4. Investigate the various seismic events
+## 5. Investigate the various seismic events
 
 The "type" column reports the type of seismic event. Not all seismic events are earthquakes! (Note: we'll still use the word "earthquake" to mean all seismic events for the remainder of this session.)
 
@@ -100,9 +118,9 @@ d %>%
 
 
 
-## 5. Visualize the distribution of magnitude between earthquake types
+## 6. Visualize the distribution of magnitude between earthquake types
 
-How does the distribution of magnitude vary between earthquake types? Hint: histograms are good for visualizing distributions; `facet_wrap()` would be good to use for this task.  
+How does the distribution of magnitude vary between earthquake types? Hint: `facet_wrap()` would be good to use for this task.  
 
 Note: magnitude can sometimes be negative: https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
 
@@ -119,11 +137,11 @@ ggplot(d) +
 
 
 
-# 6. Visualize the relationship between depth and depth error
+# 7. Visualize the relationship between depth and depth error
 
-The "depth" variable measures the depth of an earthquake in kilometers. The "depthError" column reports the uncertainty of the reported depth. Is "depthError" associated with "depth"? Create a plot to investigate and visualize the relationship.
+The "depth" variable measures the depth of an earthquake in kilometers. The "depthError" column reports the uncertainty of the reported depth. Is "depthError" associated with "depth"? 
 
-Are there influential "depthError" observations that suppress or amplify this relationship? Tip: it may help to filter the data for "depthError" less than 30.
+- Create a plot to investigate and visualize the relationship between "depthError" and "depth". (Hint: we may need to filter the data or zoom in on it.)
 
 
 ```{r}
@@ -143,11 +161,19 @@ ggplot(d) +
   aes(x = depth, y = depthError) +
   geom_point() +
   geom_smooth() +
-  ylim(c(0,30))
+  ylim(c(0,50))
+```
+
+- Which observations had unusually large depth errors? List those observations showing the depth, depthError, place, and mag columns.
+
+```{r}
+d %>% 
+  filter(depthError > 50) %>% 
+  select(depth, depthError, place, mag)
 ```
 
 
-## 7. Visualize the relationship between magError and magType
+## 8. Visualize the relationship between magError and magType
 
 The "magType" column reports the method or algorithm used to calculate the magnitude for the event. 
 
@@ -177,7 +203,7 @@ ggplot(d) +
 ```
 
 
-## 8. Investigate location of earthquakes
+## 9. Investigate location of earthquakes
 
 The place column reports distance and direction from a location (sometimes). Here's a random sample. The function `set.seed(21)` ensures we all see the same random sample.
 
@@ -196,7 +222,7 @@ The `str_replace()` function from the stringr package finds a text pattern and r
 
 ```{r}
 d <- d %>% 
-  mutate(location = stringr::str_replace(place, ".+ of ", "")) 
+  mutate(location = str_replace(place, ".+ of ", "")) 
 ```
 
 Compare the result with the existing place column.
@@ -236,7 +262,7 @@ d %>%
 
 
 
-## 9. Do seismic events in some locations tend to have larger magError?
+## 10. Do seismic events in some locations tend to have larger magError?
 
 The "magError" column reports the uncertainty of the reported magnitude of an event. (ie, the estimated standard error of the magnitude.) A "magError" greater than 3 is considered large. Using our new "location" column, is there a location that seems to consistently have large "magErrors"? If so, what location is it?
 
@@ -250,15 +276,16 @@ d %>%
 
 
 
-## 10. Investigate elapsed time between earthquakes
+## 11. Investigate elapsed time between earthquakes
 
-The data is ordered in descending order, with the _most recent earthquake first_. Below we calculate elapsed time between earthquakes. For example, the first two rows have the following times:
+The data is ordered in descending order, with the _most recent earthquake first_. For example, the first two rows have the following times:
 
+```{r}
+d %>% 
+  select(time) %>% 
+  head(n = 2)
 ```
-time 
-2021-12-17 20:00:54
-2021-12-17 19:50:06
-```
+
 
 The elapsed time between the earthquakes was 648.372 seconds. (The raw data has time down to the thousandth of a second!) That's about 10.8 minutes.
 
@@ -305,8 +332,33 @@ d %>%
   select(location, elapsed_time)
 ```
 
+## 12. Investigate elapsed time in specific places
 
-## Done!
+Previously the elapsed time between earthquakes was calculated for earthquakes worldwide. 
+
+- How frequently did seismic events occur in "The Geysers, CA"? Calculate the median elapsed time.
+
+```{r}
+d %>% 
+  filter(location == "The Geysers, CA") %>% 
+  mutate(elapsed_time = time - lead(time)) %>% 
+  summarise(med = median(elapsed_time, na.rm = TRUE)) %>% 
+  mutate(med = lubridate::time_length(med, unit = "minutes"))
+```
+
+- How frequently did seismic events occur in "Pāhala, Hawaii"? Calculate the median elapsed time. Tip: "Pāhala, Hawaii" has a special character in it. When you `filter()`, consider using something like `str_detect(location, "P*hala, Hawaii")`
+
+```{r}
+d %>% 
+  filter(str_detect(location, "P*hala, Hawaii")) %>% 
+  mutate(elapsed_time = time - lead(time)) %>% 
+  summarise(med = median(elapsed_time, na.rm = TRUE)) %>% 
+  mutate(med = lubridate::time_length(med, unit = "minutes"))
+
+```
+
+
+## We're finished! Well done! You rock with high magnitude!
 
 ## Appendix: Plotting earthquakes on a map
 
