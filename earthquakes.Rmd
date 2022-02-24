@@ -2,7 +2,9 @@
 title: "PhD Plus Final Project: Earthquake analysis"
 author: "Clay Ford"
 date: "Spring 2022"
-output: html_document
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -30,13 +32,13 @@ Each row in the data represents one earthquake. The data is ordered by earthquak
 
 Earthquakes data for the past 30 days was retrieved on 2021-12-17 and is available as a CSV file from the following URL:
 
-https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true
+https://github.com/clayford/earthquakes/raw/main/all_month.csv
 
 Using the URL above, import the data as a data frame object and name it "d". Tip: use the `read_csv()` function in the readr package. The base R `read.csv` works just fine, but the `read_csv` function automatically formats the dates for us. Also recall that `read_csv()` works with URLs.
 
 ```{r}
 library(tidyverse)
-URL <- "https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true"
+URL <- "https://github.com/clayford/earthquakes/raw/main/all_month.csv"
 d <- read_csv(URL)
 ```
 
@@ -52,12 +54,14 @@ glimpse(d)
 summary(d)
 ```
 
+
 ```{r}
-# map table to character columns with less than 20 distinct levels
 d %>% 
-  select(where(~ is.character(.x) & length(unique(.x)) < 20)) %>% 
-  map(table)
+  select(where(is.character)) %>% 
+  select(-id, -place) %>% 
+  lapply(table, useNA = "ifany")
 ```
+
 
 ```{r}
 # map summary to numeric columns
@@ -106,7 +110,18 @@ Please answer the following questions:
 ```{r}
 d %>% 
   count(type)
+
+d %>% 
+  count(type) %>% 
+  mutate(freq = n / sum(n))
 ```
+
+- What proportion of the seismic events were "earthquakes"?
+
+```{r}
+mean(d$type == "earthquake")
+```
+
 
 - What was the maximum magnitude for each seismic event?
 
@@ -281,13 +296,20 @@ d %>%
 The data is ordered in descending order, with the _most recent earthquake first_. For example, the first two rows have the following times:
 
 ```{r}
-d %>% 
-  select(time) %>% 
-  head(n = 2)
+d$time[1:2]
 ```
 
+UTC is Universal Coordinated Time. Also knows as Greenwich Mean Time.
 
-The elapsed time between the earthquakes was 648.372 seconds. (The raw data has time down to the thousandth of a second!) That's about 10.8 minutes.
+The times look like they're character values, but that's just how they print. Internally they are stored as number of seconds since January 1, 1970. We can see that by calling `as.numeric()` on the times.
+
+```{r}
+as.numeric(d$time[1:2])
+```
+
+Time stored in this way allows us to calculate elapsed time.
+
+The elapsed time between the first two earthquakes in our data was 648.372 seconds. (The raw data has time down to the thousandth of a second!) That's about 10.8 minutes.
 
 The following R code adds a column called "elapsed_time" that records the time that elapsed before the seismic event occurred. We use the dplyr function `lead()` which returns the "next" value in a vector and perform subtraction. So the first row above will have a new column indicating the previous earthquake happened 648 seconds earlier:
 
@@ -317,7 +339,7 @@ d %>%
 
 ```
 
-- What is the median elapsed times between earthquakes?
+- What is the median elapsed times between earthquakes? In other words, about how often do earthquakes occur on earth?
 
 ```{r}
 median(d$elapsed_time, na.rm = TRUE)
