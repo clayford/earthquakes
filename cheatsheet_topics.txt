@@ -1,0 +1,41 @@
+# import data
+read_csv
+
+# quick glance at data
+str, glimpse, summary, View, table, head, tail
+
+# Comparisons
+==
+!=
+>, >=
+<, <=
+
+# Logical
+& - AND
+| - OR
+! - NOT
+
+# counts and proportions
+table
+mean(d$x == "a")
+
+# create a vector
+c()
+
+# sort
+arrange()/arrange(desc())
+
+# subset/filter
+filter()
+
+# group by and summarize
+group_by(g) %>% summarize(mean(x))
+
+# distribution
+geom_dist, geom_histogram
+
+# scatter plot
+geom_point
+
+# conditional plots
+facet_wrap(~ g)

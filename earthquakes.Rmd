@@ -1,7 +1,7 @@
 ---
 title: "PhD Plus Final Project: Earthquake analysis"
 author: "Clay Ford"
-date: "Spring 2022"
+date: "March 16, 2022"
 output: html_document
 ---
 
@@ -11,9 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Instructions
 
-Complete all tasks with working R code. Add explanations and comments when requested or as needed. When done, save your work and email your completed Rmd file to Clay Ford: `clayford@virginia.edu`.
+Complete all tasks with working R code.  
 
-We will all work together on this, pausing to work on each task, and then coming together to discuss how to accomplish the task. Think of this session as completing 10 YOUR TURNS.
+Reminder: Add a new R code chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl + Alt + I* (Win/Linux) or *Cmd + Option + I* (Mac). 
+
+We will all work together on this, pausing to work on each task, and then coming together to discuss how to accomplish the task. 
 
 ## About the data
 
@@ -28,15 +30,17 @@ Each row in the data represents one earthquake. The data is ordered by earthquak
 
 ## 1. Read in the data
 
-Earthquakes data for the past 30 days was retrieved on 2021-12-17 and is available as a CSV file from the following URL:
+Earthquakes data for the past 30 days are available at the following link. These records are updated every minute.
 
-https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true
+https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv
 
-Using the URL above, import the data as a data frame object and name it "d". Tip: use the `read_csv()` function in the readr package. The base R `read.csv` works just fine, but the `read_csv` function automatically formats the dates for us. Also recall that `read_csv()` works with URLs.
+Using the URL above, import the data as a data frame object and name it "d".
+
+Tip: use the `read_csv()` function in the readr package. Recall that `read_csv()` works with URLs. The base R `read.csv` works just fine, but the `read_csv` function automatically formats the dates for us.
 
 ```{r}
 library(tidyverse)
-URL <- "https://github.com/clayford/earthquakes/blob/main/all_month.csv?raw=true"
+URL <- "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
 d <- read_csv(URL)
 ```
 
@@ -48,56 +52,67 @@ Use at least two functions to learn about the data.
 
 ```{r}
 str(d)
-glimpse(d)
-summary(d)
 ```
 
-```{r}
-# map table to character columns with less than 20 distinct levels
-d %>% 
-  select(where(~ is.character(.x) & length(unique(.x)) < 20)) %>% 
-  map(table)
-```
-
-```{r}
-# map summary to numeric columns
-d %>% 
-  select(where(is.numeric)) %>% 
-  map(summary)
-```
 
 ## 3. Visualize the distribution of magnitude
 
-The "mag" variable measures the magnitude of an earthquake on the Richter scale. It is a logarithmic scale which is a fancy way of saying it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
+The "mag" variable measures the magnitude of an earthquake on the Richter scale. It is a logarithmic scale which means it's multiplicative. An earthquake of magnitude 3 is 10 times stronger than an earthquake of magnitude 2. An earthquake of magnitude 4 is 10 times stronger than an earthquake of magnitude 3. And so on. 
 
-Visualize the distribution of "mag". Comment on this distribution.
+Note: magnitude can sometimes be negative! https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
+
+Visualize the distribution of "mag". 
 
 ```{r}
-# Distribution is bimodal, with peaks at about 1 and 4.
 ggplot(d) +
   aes(x = mag) +
   geom_density()
 ```
 
-
-
 ## 4. Visualize the relationship between depth and magnitude
 
 The "depth" variable measures the depth of an earthquake in kilometers. 
 
-How is the depth of an earthquake associated with its magnitude ("mag")? Create a visualization to investigate. Comment on this relationship (one sentence will do.)
+How is the depth of an earthquake associated with its magnitude ("mag")? Create a visualization to investigate with "mag" on the y-axis. 
 
 ```{r}
-# Anything deeper than about 300 kilometers appears to have a mag of at least 4.
 ggplot(d) +
   aes(x = depth, y = mag) +
   geom_point()
 ```
 
+## 5. Investigate the status of the seismic event
 
-## 5. Investigate the various seismic events
+Status is either "automatic" or "reviewed." Automatic events are directly posted by automatic processing systems and have not been verified or altered by a human. Reviewed events have been looked at by a human. The level of review can range from a quick validity check to a careful reanalysis of the event. 
 
-The "type" column reports the type of seismic event. Not all seismic events are earthquakes! (Note: we'll still use the word "earthquake" to mean all seismic events for the remainder of this session.)
+- How many events have been reviewed?
+
+```{r}
+table(d$status)
+```
+
+- What proportion have been reviewed?
+
+```{r}
+mean(d$status == "reviewed")
+```
+
+
+## 6. Visualize the relationship between depth and magnitude by status
+
+Update your earlier plot that visualized the relationship between depth and magnitude to incorporate information about status. 
+
+```{r}
+ggplot(d) +
+  aes(x = depth, y = mag) +
+  geom_point(alpha = 1/5) +
+  facet_wrap(~status)
+```
+
+
+## 7. Investigate the various seismic events
+
+The "type" column reports the type of seismic event. 
 
 Please answer the following questions:
 
@@ -116,18 +131,19 @@ d %>%
   summarize(max = max(mag, na.rm = TRUE))
 ```
 
-
-
-## 6. Visualize the distribution of magnitude between earthquake types
-
-How does the distribution of magnitude vary between earthquake types? Hint: `facet_wrap()` would be good to use for this task.  
-
-Note: magnitude can sometimes be negative: https://www.usgs.gov/faqs/how-can-earthquake-have-negative-magnitude
+- What proportion of seismic events are NOT recorded as "earthquakes"?
 
 ```{r}
-# seismic events that were not "earthquake" tend to be about magnitude 2 or
-# lower.
-# Earthquakes were bimodal, with concentrations around 0-2 and 4-5
+mean(d$type != "earthquake")
+```
+
+
+## 8. Visualize the distribution of magnitude between earthquake types
+
+How does the distribution of magnitude vary between earthquake types? 
+
+
+```{r}
 ggplot(d) +
   aes(x = mag) +
   geom_histogram() +
@@ -135,51 +151,47 @@ ggplot(d) +
   
 ```
 
-
-
-# 7. Visualize the relationship between depth and depth error
-
-The "depth" variable measures the depth of an earthquake in kilometers. The "depthError" column reports the uncertainty of the reported depth. Is "depthError" associated with "depth"? 
-
-- Create a plot to investigate and visualize the relationship between "depthError" and "depth". (Hint: we may need to filter the data or zoom in on it.)
-
-
 ```{r}
-# outlying values may obscure relationship
 ggplot(d) +
-  aes(x = depth, y = depthError) +
-  geom_point() +
-  geom_smooth()
+  aes(x = type, y = mag) +
+  geom_boxplot()
 ```
 
 
+# 9. Visualize the relationship between depth and depth error
+
+The "depth" variable measures the depth of an earthquake in kilometers.
+
+The "depthError" column reports the uncertainty of the reported depth. 
+
+Is "depthError" associated with "depth"? 
+
+- Create a scatter plot to visualize the relationship between "depthError" and "depth". Plot "depthError" on the y-axis. 
+
+
 ```{r}
-# filter for depthError < 30;
-# Seems to be a positive association for those events with smaller depthError
-# values, especially for depths up to 400 km.
 ggplot(d) +
   aes(x = depth, y = depthError) +
-  geom_point() +
-  geom_smooth() +
-  ylim(c(0,50))
+  geom_point()
 ```
 
-- Which observations had unusually large depth errors? List those observations showing the depth, depthError, place, and mag columns.
+
+- Which observations had depth errors larger than 40? List those observations showing the status, depth, depthError, place, and mag columns.
 
 ```{r}
 d %>% 
-  filter(depthError > 50) %>% 
-  select(depth, depthError, place, mag)
+  filter(depthError > 40) %>% 
+  select(depth, depthError, place, mag, status)
 ```
 
 
-## 8. Visualize the relationship between magError and magType
+## 10. Visualize the relationship between magError and magType
 
-The "magType" column reports the method or algorithm used to calculate the magnitude for the event. 
+The "magType" column reports the method or algorithm used to calculate the magnitude for the event. See <https://www.usgs.gov/programs/earthquake-hazards/magnitude-types>
 
-The "magError" column reports the uncertainty of the reported magnitude of an event. (ie, the estimated standard error of the magnitude.)
+The "magError" column reports the uncertainty of the reported magnitude of an event. (ie, the estimated standard error of the magnitude.) A magError greater than 3 is considered large.
 
-Does magError differ between magType? Are there certain methods that have higher error? _Create at least two visualizations to explore this_. Consider a strip chart, or boxplot, or violin plot. Comment on which algorithms appear to have more uncertainty in their measurements.
+How does the distribution of magError differ between magType? Are there certain methods that have higher error? _Create at least two visualizations to explore this_. 
 
 ```{r}
 # ml and md methods seem to have higher errors
@@ -203,12 +215,11 @@ ggplot(d) +
 ```
 
 
-## 9. Investigate location of earthquakes
+## 11. Investigate location of earthquakes
 
-The place column reports distance and direction from a location (sometimes). Here's a random sample. The function `set.seed(21)` ensures we all see the same random sample.
+The place column reports distance and direction from a location (sometimes). Here's a random sample. 
 
 ```{r}
-set.seed(21)
 d %>% 
   sample_n(6) %>% 
   select(place)
@@ -216,9 +227,17 @@ d %>%
 
 Sometimes we are only told things like "off the coast of..." or "California-Nevada border region". 
 
-Below we create a new column called "location" that contains _just the location_ of the seismic event. For example, if a row has place "40 km NE of Severomuysk, Russia" we want location to be "Severomuysk, Russia". And if a row has place "South Sandwich Islands region" we want location to be "South Sandwich Islands region". 
+Below we create a new column called "location" that contains _just the location_ of the seismic event. 
 
-The `str_replace()` function from the stringr package finds a text pattern and replaces it with whatever we specify. Below we define a regular expression ".+ of " that means "one or more characters followed by " of ". We find that text pattern, replace it with nothing, and save the result to a new column called "location". Please run this code.
+For example, if a row has place 
+_52 km W of Anchor Point, Alaska _
+
+we want location to be 
+_Anchor Point, Alaska_
+
+And if a row has place "South Sandwich Islands region" we want location to be "South Sandwich Islands region". 
+
+The `str_replace()` function from the **stringr** package (a tidyverse package) finds a text pattern and replaces it with whatever we specify. Below we define a _regular expression_ ".+ of " that means "one or more characters (.+) followed by " of ". We find that text pattern, replace it with nothing, and save the result to a new column called "location". Please run this code.
 
 ```{r}
 d <- d %>% 
@@ -228,7 +247,6 @@ d <- d %>%
 Compare the result with the existing place column.
 
 ```{r}
-set.seed(21)
 d %>% 
   sample_n(6) %>% 
   select(place, location)
@@ -250,35 +268,32 @@ d %>%
   head(n = 5)
 ```
 
-- Which two locations experienced more than 10 seismic events classified as `type == "quarry blast"`. 
+- Which locations experienced more than 5 seismic events classified as `type == "quarry blast"`. 
 
 ```{r}
 d %>% 
   filter(type == "quarry blast") %>% 
   count(location) %>% 
   arrange(desc(n)) %>% 
-  filter(n > 10)
+  filter(n > 5)
 ```
 
 
+## 12. Do seismic events in some locations tend to have larger magError?
 
-## 10. Do seismic events in some locations tend to have larger magError?
-
-The "magError" column reports the uncertainty of the reported magnitude of an event. (ie, the estimated standard error of the magnitude.) A "magError" greater than 3 is considered large. Using our new "location" column, is there a location that seems to consistently have large "magErrors"? If so, what location is it?
+The "magError" column reports the uncertainty of the reported magnitude of an event. (ie, the estimated standard error of the magnitude.) A "magError" greater than 3 is considered large. Using our new "location" column, is there a location that seems to consistently have large "magErrors"? 
 
 ```{r}
 d %>% 
   filter(magError > 3) %>% 
   count(location)
-
-# Pahala, Hawaii
 ```
 
 
 
-## 11. Investigate elapsed time between earthquakes
+## 13. Investigate elapsed time between seismic events
 
-The data is ordered in descending order, with the _most recent earthquake first_. For example, the first two rows have the following times:
+The data is ordered in descending order, with the _most recent seismic events first_. For example, the first two rows have the following times:
 
 ```{r}
 d %>% 
@@ -287,75 +302,128 @@ d %>%
 ```
 
 
-The elapsed time between the earthquakes was 648.372 seconds. (The raw data has time down to the thousandth of a second!) That's about 10.8 minutes.
-
-The following R code adds a column called "elapsed_time" that records the time that elapsed before the seismic event occurred. We use the dplyr function `lead()` which returns the "next" value in a vector and perform subtraction. So the first row above will have a new column indicating the previous earthquake happened 648 seconds earlier:
-
-```
-time                 elapsed_time
-2021-12-17 20:00:54  648.372
-
-```
-
-The last row will have NA since it's the oldest record in our data and we don't have the time of the earthquake before it.
+The elapsed time between the two seismic events is the first time minus the second time. Since `read_csv()` automatically formatted the date-times for us, we can perform subtraction to get elapsed time.
 
 ```{r}
+d$time[1] - d$time[2]
+```
+
+The following R code does this for all times. It adds a column to our data frame called "elapsed_time" that stores the time elapsed between seismic events. We use the dplyr function `lead()` which returns the "next" value in a vector and perform subtraction. The last row will have NA since it's the oldest record in our data and we don't have the time of the earthquake before it.
+
+The `as.duration` function from lubridate creates a numeric time measurement that prints both seconds and approximate minutes.
+
+```{r}
+library(lubridate)
 d <- d %>% 
-  mutate(elapsed_time = time - lead(time))
+  mutate(elapsed_time = as.duration(time - lead(time)))
+d %>% 
+  select(time, elapsed_time) %>% 
+  head()
 ```
 
-Please perform the following tasks and answer the following questions.
+Please perform the following tasks.
 
-- Create a histogram of elapsed time between earthquakes.
+- Visualize the distribution of elapsed time.
 
 ```{r}
-# very skew
-d %>% 
-  ggplot() +
+ggplot(d) +
   aes(x = elapsed_time) +
-  geom_histogram(binwidth = 100)
-
+  geom_histogram()
 ```
 
-- What is the median elapsed times between earthquakes?
+- What is the median elapsed time? In other words, about how often is a seismic event recorded by the USGS?
 
 ```{r}
 median(d$elapsed_time, na.rm = TRUE)
 ```
 
-- What was the longest elapsed time between earthquakes and where did it happen?
 
-```{r}
-d %>% 
-  arrange(desc(elapsed_time)) %>% 
-  head(n = 1) %>% 
-  select(location, elapsed_time)
-```
+## 14. Investigate elapsed time in specific places
 
-## 12. Investigate elapsed time in specific places
+Previously the elapsed time between seismic events was calculated worldwide. 
 
-Previously the elapsed time between earthquakes was calculated for earthquakes worldwide. 
-
-- How frequently did seismic events occur in "The Geysers, CA"? Calculate the median elapsed time.
+- What was the median elapsed time between seismic events in "The Geysers, CA"? Hint: we need to recalculate elapsed time for just "The Geysers, CA".
 
 ```{r}
 d %>% 
   filter(location == "The Geysers, CA") %>% 
   mutate(elapsed_time = time - lead(time)) %>% 
-  summarise(med = median(elapsed_time, na.rm = TRUE)) %>% 
-  mutate(med = lubridate::time_length(med, unit = "minutes"))
+  summarise(med = median(elapsed_time, na.rm = TRUE)) 
 ```
 
-- How frequently did seismic events occur in "Pāhala, Hawaii"? Calculate the median elapsed time. Tip: "Pāhala, Hawaii" has a special character in it. When you `filter()`, consider using something like `str_detect(location, "P*hala, Hawaii")`
+- What was the median elapsed time between seismic events in "Pāhala, Hawaii"? Tip: "Pāhala, Hawaii" has a special character in it. When you `filter()`, consider using something like `str_detect(location, "P*hala, Hawaii")`
 
 ```{r}
 d %>% 
   filter(str_detect(location, "P*hala, Hawaii")) %>% 
   mutate(elapsed_time = time - lead(time)) %>% 
-  summarise(med = median(elapsed_time, na.rm = TRUE)) %>% 
-  mutate(med = lubridate::time_length(med, unit = "minutes"))
+  summarise(med = median(elapsed_time, na.rm = TRUE)) 
 
 ```
+
+
+## 15. Seismic events in the United States
+
+What if we want to look at data just for the United States? We need to identify those records that are occurred in a US state. One way to do that is with a _regular expression_. Below we build a regular expression using the built-in `state.name` vector that comes with R. But we also append "CA" to it since our earthquake data always lists California as "CA". 
+
+The regular expression is simply all 50 US states in a single set of parentheses separated by a vertical bar (|). This allows us to check for multiple instances of text at the end of a string. For example the regular expression "(car|bike|boat)" allows us to look for the words "car", "bike" or "boat" at the same time. 
+
+Then we add a dollar sign at the end. This means look for the word at the end of the string. We're going to cycle through each record's place entry and see if it contains one of the US states at the end of the entry. 
+
+```{r}
+state.name
+# Append CA since California is abbreviated in data
+states <- c(state.name, "CA")
+# create a regular expression for all US states at the end of a string
+sre <- paste0("(", paste(states, collapse = "|"), ")$")
+```
+
+Use the `str_detect()` function to see if one of the US states is "detected" in the "place" column. Returns TRUE if detected, FALSE otherwise.
+
+```{r}
+d <- d %>% 
+  mutate(US = str_detect(place, pattern = sre))
+d %>% 
+  sample_n(6) %>% 
+  select(place, US)
+```
+
+With our US column added, please complete the following tasks.
+
+- Visualize the distribution of "mag" for those events that occurred in the US.
+
+```{r}
+ggplot(filter(d, US)) +
+  aes(x = mag) +
+  geom_density()
+```
+
+- Count up the types of seismic events that occurred in the US.
+
+```{r}
+d %>% 
+  filter(US) %>% 
+  count(type)
+```
+
+
+
+- What is the median seismic event magnitude in the US?
+
+```{r}
+d %>% 
+  filter(US) %>% 
+  summarise(med = median(mag, na.rm = TRUE))
+```
+
+- how does the median seismic event magnitude for the US differ from the rest of the world?
+
+```{r}
+d %>% 
+  group_by(US) %>% 
+  summarise(med = median(mag, na.rm = TRUE))
+```
+
 
 
 ## We're finished! Well done! You rock with high magnitude!
@@ -364,7 +432,7 @@ d %>%
 
 Our data has latitude and longitude coordinates of the observed seismic event. Longitude is the world's x-axis. Latitude is the world's y-axis. Using these coordinates we can plot the location of events on a map.
 
-Below is an example of how we can do that using the leaflet package. If you have never used leaflet you'll need to install it. Run the code below. An interactive map should be created in the RStudio Viewer that you can double-click or scroll to zoom in on locations. You can also click-and-drag to move around. Try it.
+Below is an example of how we can do that using the **leaflet** package. If you have never used leaflet you'll need to install it. Run the code below. An interactive map should be created in the RStudio Viewer that you can double-click or scroll to zoom in on locations. You can also click-and-drag to move around. Try it.
 
 ```{r}
 library(leaflet)
@@ -407,11 +475,11 @@ d %>%
 
 ```
 
-The map is very cluttered with events. Our data has over 9000 rows. We can filter the prior to mapping using familiar tidyverse functions. Below we filter for mag > 2 and location containing the string "CA".
+The map is very cluttered with events. Our data has over 9000 rows. We can filter the prior to mapping using familiar tidyverse functions. Below we filter for mag > 2 and location containing the string "Nevada".
 
 ```{r}
 d %>% 
-  filter(mag > 2 & str_detect(location, "CA")) %>% 
+  filter(mag > 2 & str_detect(location, "Nevada")) %>% 
   leaflet() %>% 
   addTiles() %>% 
   addCircleMarkers(lng = ~longitude, lat = ~latitude, 
