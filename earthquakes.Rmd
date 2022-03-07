@@ -1,8 +1,15 @@
 ---
 title: "PhD Plus Final Project: Earthquake analysis"
 author: "Clay Ford"
+<<<<<<< HEAD
 date: "March 16, 2022"
 output: html_document
+=======
+date: "Spring 2022"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+>>>>>>> c60b699f1face79c6f1c8b2ade15314360ab7b0f
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +39,11 @@ Each row in the data represents one earthquake. The data is ordered by earthquak
 
 Earthquakes data for the past 30 days are available at the following link. These records are updated every minute.
 
+<<<<<<< HEAD
 https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv
+=======
+https://github.com/clayford/earthquakes/raw/main/all_month.csv
+>>>>>>> c60b699f1face79c6f1c8b2ade15314360ab7b0f
 
 Using the URL above, import the data as a data frame object and name it "d".
 
@@ -40,7 +51,11 @@ Tip: use the `read_csv()` function in the readr package. Recall that `read_csv()
 
 ```{r}
 library(tidyverse)
+<<<<<<< HEAD
 URL <- "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
+=======
+URL <- "https://github.com/clayford/earthquakes/raw/main/all_month.csv"
+>>>>>>> c60b699f1face79c6f1c8b2ade15314360ab7b0f
 d <- read_csv(URL)
 ```
 
@@ -54,6 +69,24 @@ Use at least two functions to learn about the data.
 str(d)
 ```
 
+<<<<<<< HEAD
+=======
+
+```{r}
+d %>% 
+  select(where(is.character)) %>% 
+  select(-id, -place) %>% 
+  lapply(table, useNA = "ifany")
+```
+
+
+```{r}
+# map summary to numeric columns
+d %>% 
+  select(where(is.numeric)) %>% 
+  map(summary)
+```
+>>>>>>> c60b699f1face79c6f1c8b2ade15314360ab7b0f
 
 ## 3. Visualize the distribution of magnitude
 
@@ -121,7 +154,18 @@ Please answer the following questions:
 ```{r}
 d %>% 
   count(type)
+
+d %>% 
+  count(type) %>% 
+  mutate(freq = n / sum(n))
 ```
+
+- What proportion of the seismic events were "earthquakes"?
+
+```{r}
+mean(d$type == "earthquake")
+```
+
 
 - What was the maximum magnitude for each seismic event?
 
@@ -296,13 +340,20 @@ d %>%
 The data is ordered in descending order, with the _most recent seismic events first_. For example, the first two rows have the following times:
 
 ```{r}
-d %>% 
-  select(time) %>% 
-  head(n = 2)
+d$time[1:2]
 ```
 
+UTC is Universal Coordinated Time. Also knows as Greenwich Mean Time.
 
-The elapsed time between the two seismic events is the first time minus the second time. Since `read_csv()` automatically formatted the date-times for us, we can perform subtraction to get elapsed time.
+The times look like they're character values, but that's just how they print. Internally they are stored as number of seconds since January 1, 1970. (Recall that the `read_csv()` function automatically formatted the date-times for us.) We can see their values by calling `as.numeric()` on the times.
+
+```{r}
+as.numeric(d$time[1:2])
+```
+
+Time stored in this way allows us to calculate elapsed time.
+
+The elapsed time between the two seismic events is the first time minus the second time. 
 
 ```{r}
 d$time[1] - d$time[2]
@@ -316,10 +367,16 @@ The `as.duration` function from lubridate creates a numeric time measurement tha
 library(lubridate)
 d <- d %>% 
   mutate(elapsed_time = as.duration(time - lead(time)))
+```
+
+Quick look at the first 6 rows.
+
+```{r}
 d %>% 
   select(time, elapsed_time) %>% 
   head()
 ```
+
 
 Please perform the following tasks.
 
@@ -331,7 +388,7 @@ ggplot(d) +
   geom_histogram()
 ```
 
-- What is the median elapsed time? In other words, about how often is a seismic event recorded by the USGS?
+- What is the median elapsed time between seismic events? In other words, about how often is the USGS detecting seismic events on earth?
 
 ```{r}
 median(d$elapsed_time, na.rm = TRUE)
