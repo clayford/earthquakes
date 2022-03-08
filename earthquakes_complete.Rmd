@@ -179,9 +179,9 @@ mean(d$type != "earthquake")
 ```
 
 
-## 8. Visualize the distribution of magnitude between earthquake types
+## 8. Visualize the distribution of magnitude between seismic events
 
-How does the distribution of magnitude vary between earthquake types? 
+How does the distribution of magnitude vary between seismic events? 
 
 
 ```{r}
@@ -217,7 +217,7 @@ ggplot(d) +
 ```
 
 
-- Which observations had depth errors larger than 40? List those observations showing the status, depth, depthError, place, and mag columns.
+- Which observations (if any) had depth errors larger than 40? List those observations showing the status, depth, depthError, place, and mag columns.
 
 ```{r}
 d %>% 
@@ -294,7 +294,7 @@ d %>%
 
 Now answer the following questions: 
 
-- Which five locations had the most seismic events? 
+- What are the top five locations for most seismic events? 
 
 ```{r}
 d %>% 
@@ -307,6 +307,20 @@ d %>%
   count(location) %>% 
   arrange(desc(n)) %>% 
   head(n = 5)
+```
+
+- How many locations have experienced more than 100 seismic events?
+
+```{r}
+d %>% 
+  count(location) %>% 
+  filter(n > 100) %>% 
+  nrow()
+```
+
+```{r}
+# or this works too
+sum(table(d$location) > 100)
 ```
 
 
@@ -418,9 +432,9 @@ d %>%
 
 ## 15. Seismic events in the United States
 
-What if we want to look at data just for the United States? We need to identify those records that are occurred in a US state. One way to do that is with a _regular expression_. Below we build a regular expression using the built-in `state.name` vector that comes with R. But we also append "CA" to it since our earthquake data always lists California as "CA". 
+What if we want to look at data just for the United States? We need to identify those records that occurred in a US state. One way to do that is with a _regular expression_. Below we build a regular expression using the built-in `state.name` vector that comes with R. But we also append "CA" to it since our earthquake data always lists California as "CA". 
 
-The regular expression is simply all 50 US states in a single set of parentheses separated by a vertical bar (|). This allows us to check for multiple instances of text at the end of a string. For example the regular expression "(car|bike|boat)" allows us to look for the words "car", "bike" or "boat" at the same time. 
+The regular expression is simply all 50 US states in a single set of parentheses separated by a vertical bar (|). This allows us to check for multiple instances of text. For example the regular expression "(car|bike|boat)" allows us to look for the words "car", "bike" or "boat" at the same time. 
 
 Then we add a dollar sign at the end. This means look for the word at the end of the string. We're going to cycle through each record's place entry and see if it contains one of the US states at the end of the entry. 
 
@@ -484,9 +498,42 @@ d %>%
   summarise(med = median(mag, na.rm = TRUE))
 ```
 
+## 16. Seismic events in the United States by State
+
+What if we wanted a breakdown of seismic events by US state? It would help to have a column that identifies state. Below we filter by US and then use our regular expression from the last task with the stringr function `str_extract()`. We also rename states with "CA" to say "California" using the `if_else` function. Finally we save to a new data frame called us.
+
+```{r}
+us <- d %>% 
+  filter(US) %>% 
+  mutate(state = str_extract(place, sre),
+         state = if_else(state == "CA", "California", state))
+```
+
+With our new data frame created, please complete the following tasks.
+
+- Count the number of seismic events for each state and display in descending order
+
+```{r}
+us %>% 
+  count(state) %>% 
+  arrange(desc(n))
+```
+
+- What are the top five states for highest magnitude experienced? 
+
+```{r}
+us %>% 
+  group_by(state) %>% 
+  summarize(max = max(mag)) %>% 
+  arrange(desc(max)) %>% 
+  head(n = 5)
+```
+
 
 
 ## We're finished! Well done! You rock with high magnitude!
+
+Check out the HTML file associated with this Rmd file to see a "deliverable" with code and output.
 
 ## Appendix: Plotting earthquakes on a map
 

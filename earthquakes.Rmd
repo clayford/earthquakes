@@ -44,6 +44,7 @@ Tip: use the `read_csv()` function in the readr package. Recall that `read_csv()
 
 ```
 
+BACKUP PLAN: If for some reason the USGS site is down, please use this URL: https://github.com/uvastatlab/phdplus2022/raw/main/data/all_month.csv 
 
 ## 2. Take a quick glimpse of the data 
 
@@ -92,7 +93,7 @@ Status is either "automatic" or "reviewed." Automatic events are directly posted
 
 ```
 
-- What proportion have been reviewed?
+- What proportion of events have been reviewed?
 
 ```{r}
 
@@ -140,9 +141,9 @@ Please answer the following questions:
 ```
 
 
-## 8. Visualize the distribution of magnitude between earthquake types
+## 8. Visualize the distribution of magnitude between seismic events
 
-How does the distribution of magnitude vary between earthquake types? 
+How does the distribution of magnitude vary between seismic events? 
 
 
 ```{r}
@@ -152,7 +153,7 @@ How does the distribution of magnitude vary between earthquake types?
 
 # 9. Visualize the relationship between depth and depth error
 
-The "depth" variable measures the depth of an earthquake in kilometers.
+The "depth" variable measures the depth of a seismic event in kilometers.
 
 The "depthError" column reports the uncertainty of the reported depth. 
 
@@ -165,7 +166,7 @@ Is "depthError" associated with "depth"?
 ```
 
 
-- Which observations had depth errors larger than 40? List those observations showing the status, depth, depthError, place, and mag columns.
+- Which observations (if any) had depth errors larger than 40? List those observations showing the status, depth, depthError, place, and mag columns.
 
 ```{r}
 
@@ -230,7 +231,14 @@ d %>%
 
 Now answer the following questions: 
 
-- Which five locations had the most seismic events? 
+- What are the top five locations for most seismic events? 
+
+```{r}
+
+```
+
+
+- How many locations have experienced more than 100 seismic events?
 
 ```{r}
 
@@ -278,7 +286,7 @@ The elapsed time between the two seismic events is the first time minus the seco
 d$time[1] - d$time[2]
 ```
 
-The following R code does this for all times. It adds a column to our data frame called "elapsed_time" that stores the time elapsed between seismic events. We use the dplyr function `lead()` which returns the "next" value in a vector and perform subtraction. The last row will have NA since it's the oldest record in our data and we don't have the time of the earthquake before it.
+The following R code does this for all times. It adds a column to our data frame called "elapsed_time" that stores the time elapsed between seismic events. We use the dplyr function `lead()`, which returns the "next" value in a vector, and then perform subtraction. The last row will have NA since it's the oldest record in our data and we don't have the time of the earthquake before it.
 
 ```{r}
 d <- d %>% 
@@ -319,7 +327,7 @@ Previously the elapsed time between seismic events was calculated worldwide.
 
 ```
 
-- What was the median elapsed time between seismic events in "Pāhala, Hawaii"? Tip: "Pāhala, Hawaii" has a special character in it. When you `filter()`, consider using something like `str_detect(location, "P*hala, Hawaii")`
+- What was the median elapsed time between seismic events in "Pāhala, Hawaii"? Tip: "Pāhala, Hawaii" has a special character in it. When you `filter()`, consider using `str_detect(location, "P*hala, Hawaii")`
 
 ```{r}
 
@@ -328,9 +336,9 @@ Previously the elapsed time between seismic events was calculated worldwide.
 
 ## 15. Seismic events in the United States
 
-What if we want to look at data just for the United States? We need to identify those records that are occurred in a US state. One way to do that is with a _regular expression_. Below we build a regular expression using the built-in `state.name` vector that comes with R. But we also append "CA" to it since our earthquake data always lists California as "CA". 
+What if we want to look at data just for the United States? We need to identify those records that occurred in a US state. One way to do that is with a _regular expression_. Below we build a regular expression using the built-in `state.name` vector that comes with R. But we also append "CA" to it since our earthquake data always lists California as "CA". 
 
-The regular expression is simply all 50 US states in a single set of parentheses separated by a vertical bar (|). This allows us to check for multiple instances of text at the end of a string. For example the regular expression "(car|bike|boat)" allows us to look for the words "car", "bike" or "boat" at the same time. 
+The regular expression is simply all 50 US states in a single set of parentheses separated by a vertical bar (|). This allows us to check for multiple instances of text. For example the regular expression "(car|bike|boat)" allows us to look for the words "car", "bike" or "boat" at the same time. 
 
 Then we add a dollar sign at the end. This means look for the word at the end of the string. We're going to cycle through each record's place entry and see if it contains one of the US states at the end of the entry. 
 
@@ -386,8 +394,36 @@ With our US column added, please complete the following tasks.
 ```
 
 
+## 16. Seismic events in the United States by State
+
+What if we wanted a breakdown of seismic events by US state? It would help to have a column that identifies state. Below we filter by US and then use our regular expression from the last task with the stringr function `str_extract()`. We also rename states with "CA" to say "California" using the `if_else` function. Finally we save to a new data frame called us.
+
+```{r}
+us <- d %>% 
+  filter(US) %>% 
+  mutate(state = str_extract(place, sre),
+         state = if_else(state == "CA", "California", state))
+```
+
+With our new data frame created, please complete the following tasks.
+
+- Count the number of seismic events for each state and display in descending order
+
+```{r}
+
+```
+
+- What are the top five states for highest magnitude experienced? 
+
+```{r}
+
+```
+
 
 ## We're finished! Well done! You rock with high magnitude!
+
+Check out the HTML file associated with this Rmd file to see a "deliverable" with code and output.
+
 
 ## Appendix: Plotting earthquakes on a map
 
