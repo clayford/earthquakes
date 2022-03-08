@@ -46,6 +46,7 @@ URL <- "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
 d <- read_csv(URL)
 ```
 
+BACKUP PLAN: If for some reason the USGS site is down, please use this URL: https://github.com/uvastatlab/phdplus2022/raw/main/data/all_month.csv 
 
 ## 2. Take a quick glimpse of the data 
 
